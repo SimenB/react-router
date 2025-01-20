@@ -9,6 +9,10 @@ on:
       - "!release-manual"
       - "!release-manual-*"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   release:
     name: 🦋 Changesets Release
@@ -18,22 +22,22 @@ jobs:
       published_packages: ${{ steps.changesets.outputs.publishedPackages }}
       published: ${{ steps.changesets.outputs.published }}
     steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
-          cache: "yarn"
+          cache: "pnpm"
 
       - name: 📥 Install deps
-        run: yarn --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: 🔐 Setup npm auth
         run: |
@@ -49,10 +53,10 @@ jobs:
         id: changesets
         uses: changesets/action@v1
         with:
-          version: yarn run version
+          version: pnpm run changeset:version
           commit: "chore: Update version for release"
           title: "chore: Update version for release"
-          publish: yarn run release
+          publish: pnpm run release
           createGithubReleases: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -66,17 +70,17 @@ jobs:
     outputs:
       package_version: ${{ steps.find_package_version.outputs.package_version }}
     steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 16
-          cache: "npm"
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
 
       - id: find_package_version
         run: |
